@@ -1,0 +1,73 @@
+# tts_test.py
+import pyttsx3
+import subprocess
+import shlex
+import os
+
+# Texte de test
+texte = "Bonjour Imane"
+
+# Initialisation pyttsx3
+try:
+    moteur = pyttsx3.init()
+except Exception as e:
+    raise SystemExit(f"Erreur d'initialisation pyttsx3: {e}")
+
+# Réglages par défaut
+moteur.setProperty('rate', 150)
+moteur.setProperty('volume', 1.0)
+
+# Lister les voix disponibles via pyttsx3
+voices = moteur.getProperty('voices')
+print("Voices pyttsx3 disponibles :")
+for i, v in enumerate(voices):
+    print(i, getattr(v, 'id', ''), getattr(v, 'name', ''))
+
+# Choisir une voix française si présente
+chosen = None
+for v in voices:
+    vid = getattr(v, 'id', '').lower()
+    vname = getattr(v, 'name', '').lower()
+    if "fr" in vid or "french" in vname:
+        chosen = v.id
+        break
+
+if chosen:
+    moteur.setProperty('voice', chosen)
+    print("Voix FR sélectionnée :", chosen)
+else:
+    print("Aucune voix FR détectée via pyttsx3 — utilisation de la voix par défaut.")
+
+# Lecture via pyttsx3
+print("Lecture via pyttsx3...")
+moteur.say(texte)
+moteur.runAndWait()
+
+# Utilisation d'espeak-ng pour tester variantes et enregistrer WAV
+variants = ["fr", "fr+clb", "fr+f2", "fr+m1"]  # variantes à tester
+output_dir = "tts_samples"
+os.makedirs(output_dir, exist_ok=True)
+
+print("\nGénération de fichiers WAV avec espeak-ng :")
+for var in variants:
+    safe_text = texte.replace('"', '\\"')
+    out_wav = os.path.join(output_dir, f"espeakng_{var.replace('+','_')}.wav")
+    cmd = f'espeak-ng -v {var} --stdout "{safe_text}" > "{out_wav}"'
+    print("  ", cmd)
+    # Exécuter la commande dans le shell
+    res = subprocess.run(cmd, shell=True)
+    if res.returncode == 0 and os.path.isfile(out_wav):
+        print("    -> Fichier créé :", out_wav)
+    else:
+        print("    -> Échec pour variante", var)
+
+# Option: comparer en jouant le premier fichier (nécessite aplay installé)
+first = os.path.join(output_dir, f"espeakng_{variants[0].replace('+','_')}.wav")
+if os.path.isfile(first):
+    print("\nLecture du premier échantillon via aplay (si installé)...")
+    try:
+        subprocess.run(shlex.split(f"aplay \"{first}\""), check=True)
+    except Exception:
+        print("  aplay non disponible ou échec de lecture. Tu peux jouer les WAV manuellement.")
+
+print("\nTerminé. Échantillons dans :", output_dir)
