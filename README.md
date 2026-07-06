@@ -1,2 +1,2 @@
 # Here is one of my projects for kids
-![alt text](test1.jpg)
+![alt text](Screenshot_20260706_221929_Chrome.jpg)
